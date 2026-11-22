@@ -145,7 +145,7 @@ input[type=checkbox]{width:18px;height:18px;min-height:0;accent-color:var(--acc)
 @media (orientation:landscape) and (max-height:500px){.chartwrap{height:86vh;min-height:260px}}
 
 /* ===== FULL SCREEN + PRINT ===== */
-main>section,main>aside{min-width:0;max-width:100%}html,body{max-width:100vw;overflow-x:hidden}.card{min-width:0;overflow-wrap:anywhere}.card table{overflow-wrap:normal}
+main>section,main>aside{min-width:0;max-width:100%}body{overflow-x:clip}.card{min-width:0;overflow-wrap:anywhere}.card table{overflow-wrap:normal}
 #zctl button{width:32px;height:32px;font-size:15px}
 #zctl{flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 76px);gap:5px}
 .chartbox.fs{position:fixed;inset:0;z-index:200;margin:0;border-radius:0;border:0;display:flex;flex-direction:column;background:var(--bg);padding-top:env(safe-area-inset-top)}
@@ -166,11 +166,40 @@ body.fsOn{overflow:hidden}
   body.printing>*:not(#ps){display:none!important}
   body.printing #ps{display:block!important}
 }
+
+/* ===== MOBILE APP LAYOUT: bottom tabs, collapsible settings, scroll-friendly chart ===== */
+.mob{display:none}
+#tabs{display:none}
+@media(max-width:1000px){
+  .mob{display:inline-block}
+  header h1{flex:1 1 auto!important;width:auto!important}
+  header:not(.open) .adv{display:none!important}
+  header.open{box-shadow:0 8px 20px rgba(0,0,0,.4)}
+  .chartwrap{height:calc(100vh - 300px);height:calc(100dvh - 300px);min-height:300px;touch-action:pan-y}
+  #cv{touch-action:pan-y}
+  .chartbox.fs .chartwrap,.chartbox.fs #cv{touch-action:none}
+  main{display:block;padding:6px 6px calc(78px + env(safe-area-inset-bottom))}
+  main aside,main section{display:block}
+  main [data-tab]{display:none!important}
+  body[data-tab=chart] main [data-tab~=chart],body[data-tab=sig] main [data-tab~=sig],body[data-tab=jr] main [data-tab~=jr],body[data-tab=desk] main [data-tab~=desk],body[data-tab=scr] main [data-tab~=scr],body[data-tab=more] main [data-tab~=more]{display:block!important}
+  body[data-tab=chart] main .chartbox{display:block!important}
+  #tabs{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:150;background:rgba(18,24,38,.97);border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom));backdrop-filter:blur(8px)}
+  #tabs button{flex:1 1 0;min-height:52px;border:0;border-radius:10px;background:transparent;color:var(--mut);font-size:11px;font-weight:600;padding:4px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+  #tabs button i{font-style:normal;font-size:19px;line-height:1}
+  #tabs button.on{color:var(--acc);background:rgba(79,140,255,.14)}
+  body.fsOn #tabs,body.fsOn #mbar{display:none}
+  #mbar{top:0}
+  .legend{display:none}
+}
+@media(max-width:700px){
+  header h1{font-size:15px}
+  header #px{order:20}
+}
 </style>
 </head>
 <body>
 <header>
-  <h1>SMC <span>Auto Analyzer</span></h1>
+  <h1>SMC <span>Auto Analyzer</span></h1><button id="hdrTog" class="mob" aria-label="Settings" aria-expanded="false">⚙ Settings</button>
   <input id="key" type="password" placeholder="Twelve Data API key" title="Stored only in this browser"><button id="testKey">Test key</button>
   <input id="sym" type="text" value="XAU/USD" list="symlist" title="Twelve Data symbol">
   <datalist id="symlist"><option>XAU/USD<option>XAG/USD<option>EUR/USD<option>GBP/USD<option>USD/JPY<option>AUD/USD<option>SPY<option>QQQ<option>GLD<option>AAPL<option>NVDA<option>BTC/USD<option>ETH/USD<option>GBP/JPY<option>EUR/JPY<option>USD/CAD<option>IWM<option>MSFT<option>TSLA</datalist>
@@ -273,6 +302,7 @@ body.fsOn{overflow:hidden}
   Educational tool. Output is rule-based pattern detection, not financial advice; no strategy wins every trade and no filter can guarantee a setup is not a fake. "Verified" means every SMC gate (liquidity sweep, real structure shift, fresh order block, FVG, premium/discount, costs) passed and the replay edge is not negative. For gold and silver the Metals Desk adds session, volatility, chop, trend, news and margin-survival gates plus a direction lock; with a small balance even 0.01 lot can be too large for the stop, and the app will say so instead of showing an entry. Forex/metal feeds carry no true exchange volume: there, relative volume and profiles are range/time-at-price proxies and are labelled as such. Costs use typical spreads (override in Position Size). US holidays are not modelled. Forward-test on demo and manage risk.
   Data: Twelve Data REST API (forex, metals, stocks, ETF, crypto; futures/indices depend on your plan). Open this file locally in a browser. Your API key is saved only in this browser (localStorage). Without a key the app runs on DEMO data.
 </footer>
+<nav id="tabs" aria-label="Sections"><button data-t="chart"><i>📈</i>Chart</button><button data-t="sig"><i>🎯</i>Signal</button><button data-t="jr"><i>🧭</i>Journey</button><button data-t="desk"><i>🛠</i>Desks</button><button data-t="scr"><i>🔎</i>Screener</button><button data-t="more"><i>☰</i>More</button></nav>
 <script>
 const $=s=>document.querySelector(s),sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const TFMS={'5m':3e5,'15m':9e5,'1h':36e5,'4h':144e5,'1d':864e5,'1w':6048e5};
@@ -1435,6 +1465,22 @@ function doPrint(){
   window.addEventListener('afterprint',done);setTimeout(()=>window.print(),200);
 }
 $('#prBtn').addEventListener('click',doPrint);
+
+/* ===== Mobile tabs: group the cards, remember the active tab ===== */
+const TABMAP=[['SMC Screener','scr'],['Trade Signal','chart sig'],['SMC Verification','sig'],['Position Size','sig'],['Signal Journey','jr'],['Seconds Desk','desk'],['Swing Desk','desk'],['Metals Desk','desk'],['Multi-TF','desk']];
+document.querySelectorAll('main .card').forEach(c=>{const h=c.querySelector('h3'),t=h?h.textContent.trim():'',m=TABMAP.find(x=>t.startsWith(x[0]));c.dataset.tab=m?m[1]:'more'});
+box.dataset.tab='chart';
+['#key','#testKey','#bt','#swl','#sniper','#vonly','#auto','#alerts','#csv'].forEach(q=>{const e=$(q);if(!e)return;(e.closest('label')||e).classList.add('adv')});
+function setTab(t){
+  document.body.dataset.tab=t;store('tab',t);
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  window.scrollTo(0,0);if(t==='chart'){setTimeout(resize,30);setTimeout(resize,250)}
+}
+document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.t)));
+setTab(['chart','sig','jr','desk','scr','more'].includes(store('tab'))?store('tab'):'chart');
+$('#hdrTog').addEventListener('click',()=>{const h=document.querySelector('header'),o=h.classList.toggle('open');$('#hdrTog').setAttribute('aria-expanded',o);$('#hdrTog').textContent=o?'✕ Close':'⚙ Settings'});
+$('#go').addEventListener('click',()=>{document.querySelector('header').classList.remove('open');$('#hdrTog').textContent='⚙ Settings';setTab('chart')});
+document.querySelectorAll('#tbl').forEach(t=>t.addEventListener('click',()=>setTimeout(()=>setTab('chart'),50)));
 if(innerWidth<700)S.count=60;
 resize();load();
 </script>
